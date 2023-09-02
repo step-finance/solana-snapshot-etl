@@ -16,10 +16,11 @@
 
 use bincode::Options;
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
-use solana_runtime::accounts_db::BankHashInfo;
+use serde::{Deserialize, Serialize};
+use solana_frozen_abi_macro::AbiExample;
+use solana_runtime::account_storage::meta::StoredMetaWriteVersion;
+use solana_runtime::accounts_db::BankHashStats;
 use solana_runtime::ancestors::AncestorsForSerialization;
-use solana_runtime::append_vec::StoredMetaWriteVersion;
 use solana_runtime::blockhash_queue::BlockhashQueue;
 use solana_runtime::epoch_stakes::EpochStakes;
 use solana_runtime::rent_collector::RentCollector;
@@ -94,6 +95,13 @@ pub struct DeserializableVersionedBank {
     unused_accounts: UnusedAccounts,
     pub epoch_stakes: HashMap<Epoch, EpochStakes>,
     pub is_delta: bool,
+}
+
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq, Eq, AbiExample)]
+pub struct BankHashInfo {
+    pub hash: Hash,
+    pub snapshot_hash: Hash,
+    pub stats: BankHashStats,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
