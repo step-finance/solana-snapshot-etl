@@ -39,7 +39,7 @@ impl SqliteIndexer {
     pub(crate) fn new(db_path: PathBuf) -> Result<Self> {
         // Create temporary DB file, which gets promoted on success.
         let temp_file_name = format!("_{}.tmp", db_path.file_name().unwrap().to_string_lossy());
-        let db_temp_path = db_path.with_file_name(&temp_file_name);
+        let db_temp_path = db_path.with_file_name(temp_file_name);
         let _ = std::fs::remove_file(&db_temp_path);
         let db_temp_guard = TempFileGuard::new(db_temp_path.clone());
 
@@ -89,7 +89,7 @@ impl SqliteIndexer {
     }
 
     fn create_db(path: &Path) -> Result<Connection> {
-        let db = Connection::open(&path)?;
+        let db = Connection::open(path)?;
         db.pragma_update(None, "synchronous", false)?;
         db.pragma_update(None, "journal_mode", "off")?;
         db.pragma_update(None, "locking_mode", "exclusive")?;

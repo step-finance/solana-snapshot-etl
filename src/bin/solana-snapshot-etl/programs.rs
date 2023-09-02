@@ -41,6 +41,7 @@ impl ProgramDumper {
                 .with_fixint_encoding()
                 .allow_trailing_bytes()
                 .deserialize(account.data)?;
+            #[allow(clippy::single_match)]
             match header {
                 UpgradeableLoaderState::ProgramData { .. } => {
                     self.write_executable(&account.meta.pubkey, &account.data[45..])?;
