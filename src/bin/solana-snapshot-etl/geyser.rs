@@ -73,6 +73,11 @@ impl GeyserDumper {
 
 impl Drop for GeyserDumper {
     fn drop(&mut self) {
+        self.plugin
+            .notify_end_of_startup()
+            .expect("successful end of startup");
+        self.plugin.on_unload();
+
         self.accounts_spinner.finish();
     }
 }
