@@ -7,10 +7,6 @@ name = "Inflector"
 version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
-dependencies = [
- "lazy_static",
- "regex",
-]
 
 [[package]]
 name = "addr2line"
@@ -1783,16 +1779,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4668fb0ea861c1df094127ac5f1da3409a82116a4ba74fca2e58ef927159bb3"
 
 [[package]]
-name = "libloading"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efbc0f03f9a775e9f6aed295c6a1ba2253c5757a9e03d55c6caa46a681abcddd"
-dependencies = [
- "cfg-if",
- "winapi",
-]
-
-[[package]]
 name = "libsecp256k1"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3102,30 +3088,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-account-decoder"
-version = "1.16.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71e0074eb8b7115c7648de67d1dd1cc31505afcc9ebe16eb4ba3cff6f1520385"
-dependencies = [
- "Inflector",
- "base64 0.21.3",
- "bincode",
- "bs58",
- "bv",
- "lazy_static",
- "serde",
- "serde_derive",
- "serde_json",
- "solana-address-lookup-table-program",
- "solana-config-program",
- "solana-sdk",
- "spl-token",
- "spl-token-2022",
- "thiserror",
- "zstd",
-]
-
-[[package]]
 name = "solana-address-lookup-table-program"
 version = "1.16.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3249,18 +3211,6 @@ dependencies = [
  "quote 1.0.33",
  "rustc_version",
  "syn 2.0.29",
-]
-
-[[package]]
-name = "solana-geyser-plugin-interface"
-version = "1.16.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5a8b30348425f623e9ae3de88a828671174fb661224486e7c5ed4144126c660"
-dependencies = [
- "log",
- "solana-sdk",
- "solana-transaction-status",
- "thiserror",
 ]
 
 [[package]]
@@ -3580,7 +3530,6 @@ dependencies = [
  "indicatif",
  "itertools",
  "json5",
- "libloading",
  "log",
  "memmap2",
  "num_cpus",
@@ -3589,7 +3538,6 @@ dependencies = [
  "serde",
  "serde_json",
  "solana-frozen-abi-macro",
- "solana-geyser-plugin-interface",
  "solana-program",
  "solana-runtime",
  "solana-sdk",
@@ -3626,32 +3574,6 @@ dependencies = [
  "serde_derive",
  "solana-program-runtime",
  "solana-sdk",
-]
-
-[[package]]
-name = "solana-transaction-status"
-version = "1.16.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccc2fae62bb9266a196c9de6c25e484305d95a18bc05e304a176f95811a4e916"
-dependencies = [
- "Inflector",
- "base64 0.21.3",
- "bincode",
- "borsh 0.9.3",
- "bs58",
- "lazy_static",
- "log",
- "serde",
- "serde_derive",
- "serde_json",
- "solana-account-decoder",
- "solana-address-lookup-table-program",
- "solana-sdk",
- "spl-associated-token-account",
- "spl-memo",
- "spl-token",
- "spl-token-2022",
- "thiserror",
 ]
 
 [[package]]
@@ -3746,31 +3668,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
-name = "spl-associated-token-account"
-version = "1.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "978dba3bcbe88d0c2c58366c254d9ea41c5f73357e72fc0bdee4d6b5fc99c8f4"
-dependencies = [
- "assert_matches",
- "borsh 0.9.3",
- "num-derive",
- "num-traits",
- "solana-program",
- "spl-token",
- "spl-token-2022",
- "thiserror",
-]
-
-[[package]]
-name = "spl-memo"
-version = "3.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd0dc6f70db6bacea7ff25870b016a65ba1d1b6013536f08e4fd79a8f9005325"
-dependencies = [
- "solana-program",
-]
-
-[[package]]
 name = "spl-token"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3782,24 +3679,6 @@ dependencies = [
  "num-traits",
  "num_enum 0.5.11",
  "solana-program",
- "thiserror",
-]
-
-[[package]]
-name = "spl-token-2022"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0043b590232c400bad5ee9eb983ced003d15163c4c5d56b090ac6d9a57457b47"
-dependencies = [
- "arrayref",
- "bytemuck",
- "num-derive",
- "num-traits",
- "num_enum 0.5.11",
- "solana-program",
- "solana-zk-token-sdk",
- "spl-memo",
- "spl-token",
  "thiserror",
 ]
 
