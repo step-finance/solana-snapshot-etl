@@ -3593,7 +3593,6 @@ dependencies = [
  "solana-program",
  "solana-runtime",
  "solana-sdk",
- "solana_rbpf",
  "spl-token",
  "tar",
  "thiserror",
