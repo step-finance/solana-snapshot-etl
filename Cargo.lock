@@ -3490,7 +3490,6 @@ dependencies = [
  "serde",
  "serde_json",
  "solana-frozen-abi-macro",
- "solana-program",
  "solana-runtime",
  "solana-sdk",
  "spl-token",

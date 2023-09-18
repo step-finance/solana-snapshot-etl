@@ -1,36 +1,29 @@
 use crate::csv::CsvDumper;
-use crate::programs::ProgramDumper;
 use clap::{ArgGroup, Parser};
 use indicatif::{ProgressBar, ProgressBarIter, ProgressStyle};
 use log::{error, info};
 use reqwest::blocking::Response;
 use solana_snapshot_etl::archived::ArchiveSnapshotExtractor;
-use solana_snapshot_etl::parallel::AppendVecConsumer;
 use solana_snapshot_etl::unpacked::UnpackedSnapshotExtractor;
 use solana_snapshot_etl::{AppendVecIterator, ReadProgressTracking, SnapshotExtractor};
-use std::fs::{File, OpenOptions};
-use std::io::{stdout, IoSliceMut, Read, Write};
+use std::fs::File;
+use std::io::{IoSliceMut, Read};
 use std::path::Path;
 
 mod csv;
-mod programs;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 #[clap(group(
     ArgGroup::new("action")
         .required(true)
-        .args(&["csv", "programs-out"]),
+        .args(&["csv"]),
 ))]
 struct Args {
     #[clap(help = "Snapshot source (unpacked snapshot, archive file, or HTTP link)")]
     source: String,
     #[clap(long, action, help = "Write CSV to stdout")]
     csv: bool,
-    #[clap(long, action, help = "Index token program data")]
-    tokens: bool,
-    #[clap(long, help = "Write programs tar stream")]
-    programs_out: Option<String>,
 }
 
 fn main() {
@@ -54,25 +47,6 @@ fn _main() -> Result<(), Box<dyn std::error::Error>> {
         }
         drop(writer);
         println!("Done!");
-    }
-    if let Some(programs) = args.programs_out {
-        info!("Dumping program accounts to {}", &programs);
-        let writer: Box<dyn Write> = if programs == "-" {
-            Box::new(stdout())
-        } else {
-            Box::new(
-                OpenOptions::new()
-                    .write(true)
-                    .create_new(true)
-                    .open(programs)?,
-            )
-        };
-        let mut dumper = ProgramDumper::new(writer);
-        for append_vec in loader.iter() {
-            dumper.on_append_vec(append_vec?)?;
-        }
-        drop(dumper);
-        info!("Done!");
     }
     Ok(())
 }

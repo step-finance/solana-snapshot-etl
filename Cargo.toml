@@ -33,7 +33,6 @@ json5 = { version = "0.4.1", optional = true }
 num_cpus = { version = "1.13.1", optional = true }
 reqwest = { version = "0.11.11", features = ["blocking"], optional = true }
 serde_json = { version = "1.0.82", optional = true }
-solana-program = { version = "1.16.12", optional = true }
 spl-token = { version = "3.3.0", optional = true }
 
 [features]
@@ -48,7 +47,6 @@ standalone = [
     "parallel",
     "reqwest",
     "serde_json",
-    "solana-program",
     "spl-token",
     "json5",
 ]
