@@ -1,29 +1,24 @@
-use crate::csv::CsvDumper;
-use clap::{ArgGroup, Parser};
-use indicatif::{ProgressBar, ProgressBarIter, ProgressStyle};
-use log::{error, info};
-use reqwest::blocking::Response;
-use solana_snapshot_etl::archived::ArchiveSnapshotExtractor;
-use solana_snapshot_etl::unpacked::UnpackedSnapshotExtractor;
-use solana_snapshot_etl::{AppendVecIterator, ReadProgressTracking, SnapshotExtractor};
-use std::fs::File;
-use std::io::{IoSliceMut, Read};
-use std::path::Path;
-
-mod csv;
+use {
+    clap::Parser,
+    indicatif::{ProgressBar, ProgressBarIter, ProgressStyle},
+    log::{error, info},
+    reqwest::blocking::Response,
+    solana_snapshot_etl::{
+        archived::ArchiveSnapshotExtractor, unpacked::UnpackedSnapshotExtractor, AppendVecIterator,
+        ReadProgressTracking, SnapshotExtractor,
+    },
+    std::{
+        fs::File,
+        io::{IoSliceMut, Read},
+        path::Path,
+    },
+};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
-#[clap(group(
-    ArgGroup::new("action")
-        .required(true)
-        .args(&["csv"]),
-))]
 struct Args {
     #[clap(help = "Snapshot source (unpacked snapshot, archive file, or HTTP link)")]
     source: String,
-    #[clap(long, action, help = "Write CSV to stdout")]
-    csv: bool,
 }
 
 fn main() {
@@ -38,16 +33,7 @@ fn main() {
 
 fn _main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    let mut loader = SupportedLoader::new(&args.source, Box::new(LoadProgressTracking {}))?;
-    if args.csv {
-        info!("Dumping to CSV");
-        let mut writer = CsvDumper::new();
-        for append_vec in loader.iter() {
-            writer.dump_append_vec(append_vec?);
-        }
-        drop(writer);
-        println!("Done!");
-    }
+    let _loader = SupportedLoader::new(&args.source, Box::new(LoadProgressTracking {}))?;
     Ok(())
 }
 

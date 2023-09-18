@@ -7,13 +7,10 @@ use std::str::FromStr;
 use thiserror::Error;
 
 pub mod append_vec;
-pub mod solana;
-
 pub mod archived;
-pub mod unpacked;
-
-#[cfg(feature = "parallel")]
 pub mod parallel;
+pub mod solana;
+pub mod unpacked;
 
 use crate::append_vec::{AppendVec, StoredAccountMeta};
 use crate::solana::{
