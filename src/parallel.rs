@@ -1,34 +1,26 @@
-use crate::{AppendVec, AppendVecIterator};
-use crossbeam::sync::WaitGroup;
-
-pub type GenericResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
-pub trait AppendVecConsumerFactory {
-    type Consumer: AppendVecConsumer + Send + 'static;
-    fn new_consumer(&mut self) -> GenericResult<Self::Consumer>;
-}
+use {
+    crate::{AppendVec, AppendVecIterator},
+    crossbeam::sync::WaitGroup,
+};
 
 pub trait AppendVecConsumer {
-    fn on_append_vec(&mut self, append_vec: AppendVec) -> GenericResult<()>;
+    fn on_append_vec(&mut self, append_vec: AppendVec) -> anyhow::Result<()>;
 }
 
-pub fn par_iter_append_vecs<A>(
+pub fn par_iter_append_vecs<F, A>(
     iterator: AppendVecIterator<'_>,
-    consumers: &mut A,
+    create_consumer: F,
     num_threads: usize,
-) -> GenericResult<()>
+) -> anyhow::Result<()>
 where
-    A: AppendVecConsumerFactory,
+    F: Fn() -> A,
+    A: AppendVecConsumer + Send + 'static,
 {
-    let (tx, rx) = crossbeam::channel::bounded::<AppendVec>(num_threads);
-
+    let (tx, rx) = crossbeam::channel::bounded::<AppendVec>(num_threads * 2);
     let wg = WaitGroup::new();
-    let mut consumer_vec = Vec::with_capacity(num_threads);
-    for _ in 0..num_threads {
-        consumer_vec.push(consumers.new_consumer()?);
-    }
 
-    for mut consumer in consumer_vec {
+    for _ in 0..num_threads {
+        let mut consumer = create_consumer();
         let rx = rx.clone();
         let wg = wg.clone();
         std::thread::spawn(move || {
@@ -40,10 +32,11 @@ where
     }
 
     for append_vec in iterator {
-        let append_vec = append_vec?;
-        tx.send(append_vec).expect("failed to send AppendVec");
+        tx.send(append_vec?).expect("failed to send AppendVec");
     }
+
     drop(tx);
     wg.wait();
+
     Ok(())
 }

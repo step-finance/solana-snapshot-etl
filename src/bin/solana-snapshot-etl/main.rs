@@ -1,39 +1,69 @@
 use {
-    clap::Parser,
-    indicatif::{ProgressBar, ProgressBarIter, ProgressStyle},
-    log::{error, info},
+    clap::{Parser, Subcommand},
+    indicatif::{ProgressBar, ProgressBarIter, ProgressDrawTarget, ProgressStyle},
+    log::info,
     reqwest::blocking::Response,
     solana_snapshot_etl::{
-        archived::ArchiveSnapshotExtractor, unpacked::UnpackedSnapshotExtractor, AppendVecIterator,
-        ReadProgressTracking, SnapshotExtractor,
+        append_vec::AppendVec,
+        append_vec_iter,
+        archived::ArchiveSnapshotExtractor,
+        parallel::{par_iter_append_vecs, AppendVecConsumer},
+        unpacked::UnpackedSnapshotExtractor,
+        AppendVecIterator, ReadProgressTracking, SnapshotError, SnapshotExtractor, SnapshotResult,
     },
     std::{
         fs::File,
         io::{IoSliceMut, Read},
         path::Path,
+        rc::Rc,
+        sync::Arc,
     },
 };
 
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
+#[derive(Debug, Parser)]
+#[clap(author, version, about)]
 struct Args {
-    #[clap(help = "Snapshot source (unpacked snapshot, archive file, or HTTP link)")]
+    /// Snapshot source (unpacked snapshot, archive file, or HTTP link)
+    #[clap(long)]
     source: String,
+
+    #[command(subcommand)]
+    action: Action,
 }
 
-fn main() {
+#[derive(Debug, Subcommand)]
+enum Action {
+    Noop,
+}
+
+fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
     );
-    if let Err(e) = _main() {
-        error!("{}", e);
-        std::process::exit(1);
-    }
-}
 
-fn _main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    let _loader = SupportedLoader::new(&args.source, Box::new(LoadProgressTracking {}))?;
+
+    let mut loader = SupportedLoader::new(&args.source, Box::new(LoadProgressTracking {}))?;
+    match args.action {
+        Action::Noop => {
+            let bar = Arc::new(ProgressBar::with_draw_target(None, ProgressDrawTarget::stderr()).with_style(
+                ProgressStyle::with_template(
+                    "{prefix:>10.bold.dim} {spinner:.green} rate={per_sec} total={human_pos} {elapsed_precise:.cyan}",
+                )?,
+            ));
+            bar.set_prefix("accounts");
+            par_iter_append_vecs(
+                loader.iter(),
+                || NoopConsumer {
+                    bar: Arc::clone(&bar),
+                },
+                num_cpus::get(),
+            )?;
+            bar.finish();
+            info!("Done!");
+        }
+    }
+
     Ok(())
 }
 
@@ -42,22 +72,22 @@ struct LoadProgressTracking {}
 impl ReadProgressTracking for LoadProgressTracking {
     fn new_read_progress_tracker(
         &self,
-        _: &Path,
+        _path: &Path,
         rd: Box<dyn Read>,
         file_len: u64,
-    ) -> Box<dyn Read> {
+    ) -> SnapshotResult<Box<dyn Read>> {
         let progress_bar = ProgressBar::new(file_len).with_style(
             ProgressStyle::with_template(
                 "{prefix:>10.bold.dim} {spinner:.green} [{bar:.cyan/blue}] {bytes}/{total_bytes} ({percent}%)",
             )
-            .unwrap()
+            .map_err(|error| SnapshotError::ReadProgressTracking(error.to_string()))?
             .progress_chars("#>-"),
         );
         progress_bar.set_prefix("manifest");
-        Box::new(LoadProgressTracker {
+        Ok(Box::new(LoadProgressTracker {
             rd: progress_bar.wrap_read(rd),
             progress_bar,
-        })
+        }))
     }
 }
 
@@ -97,10 +127,7 @@ pub enum SupportedLoader {
 }
 
 impl SupportedLoader {
-    fn new(
-        source: &str,
-        progress_tracking: Box<dyn ReadProgressTracking>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(source: &str, progress_tracking: Box<dyn ReadProgressTracking>) -> anyhow::Result<Self> {
         if source.starts_with("http://") || source.starts_with("https://") {
             Self::new_download(source)
         } else {
@@ -108,7 +135,7 @@ impl SupportedLoader {
         }
     }
 
-    fn new_download(url: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new_download(url: &str) -> anyhow::Result<Self> {
         let resp = reqwest::blocking::get(url)?;
         let loader = ArchiveSnapshotExtractor::from_reader(resp)?;
         info!("Streaming snapshot from HTTP");
@@ -118,7 +145,7 @@ impl SupportedLoader {
     fn new_file(
         path: &Path,
         progress_tracking: Box<dyn ReadProgressTracking>,
-    ) -> solana_snapshot_etl::Result<Self> {
+    ) -> solana_snapshot_etl::SnapshotResult<Self> {
         Ok(if path.is_dir() {
             info!("Reading unpacked snapshot");
             Self::Unpacked(UnpackedSnapshotExtractor::open(path, progress_tracking)?)
@@ -136,5 +163,17 @@ impl SnapshotExtractor for SupportedLoader {
             SupportedLoader::ArchiveFile(loader) => Box::new(loader.iter()),
             SupportedLoader::ArchiveDownload(loader) => Box::new(loader.iter()),
         }
+    }
+}
+
+struct NoopConsumer {
+    bar: Arc<ProgressBar>,
+}
+
+impl AppendVecConsumer for NoopConsumer {
+    fn on_append_vec(&mut self, append_vec: AppendVec) -> anyhow::Result<()> {
+        let count = append_vec_iter(Rc::new(append_vec)).count();
+        self.bar.inc(count as u64);
+        Ok(())
     }
 }

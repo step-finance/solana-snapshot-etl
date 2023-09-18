@@ -1,22 +1,20 @@
-use std::cell::RefCell;
-use std::ffi::OsStr;
-use std::io::Read;
-use std::path::Path;
-use std::rc::Rc;
-use std::str::FromStr;
-use thiserror::Error;
+use {
+    crate::{
+        append_vec::{AppendVec, StoredAccountMeta},
+        solana::{
+            deserialize_from, AccountsDbFields, DeserializableVersionedBank,
+            SerializableAccountStorageEntry,
+        },
+    },
+    std::{ffi::OsStr, io::Read, path::Path, rc::Rc, str::FromStr},
+    thiserror::Error,
+};
 
 pub mod append_vec;
 pub mod archived;
 pub mod parallel;
 pub mod solana;
 pub mod unpacked;
-
-use crate::append_vec::{AppendVec, StoredAccountMeta};
-use crate::solana::{
-    deserialize_from, AccountsDbFields, DeserializableVersionedBank,
-    SerializableAccountStorageEntry,
-};
 
 const SNAPSHOTS_DIR: &str = "snapshots";
 
@@ -32,11 +30,13 @@ pub enum SnapshotError {
     NoSnapshotManifest,
     #[error("Unexpected AppendVec")]
     UnexpectedAppendVec,
+    #[error("Failed to create read progress tracking: {0}")]
+    ReadProgressTracking(String),
 }
 
-pub type Result<T> = std::result::Result<T, SnapshotError>;
+pub type SnapshotResult<T> = Result<T, SnapshotError>;
 
-pub type AppendVecIterator<'a> = Box<dyn Iterator<Item = Result<AppendVec>> + 'a>;
+pub type AppendVecIterator<'a> = Box<dyn Iterator<Item = SnapshotResult<AppendVec>> + 'a>;
 
 pub trait SnapshotExtractor: Sized {
     fn iter(&mut self) -> AppendVecIterator<'_>;
@@ -92,31 +92,18 @@ pub trait ReadProgressTracking {
         path: &Path,
         rd: Box<dyn Read>,
         file_len: u64,
-    ) -> Box<dyn Read>;
+    ) -> SnapshotResult<Box<dyn Read>>;
 }
 
-struct NullReadProgressTracking {}
+struct NoopReadProgressTracking {}
 
-impl ReadProgressTracking for NullReadProgressTracking {
-    fn new_read_progress_tracker(&self, _: &Path, rd: Box<dyn Read>, _: u64) -> Box<dyn Read> {
-        rd
-    }
-}
-
-struct RefCellRead<T: Read> {
-    rd: RefCell<T>,
-}
-
-impl<T: Read> Read for RefCellRead<T> {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.rd
-            .try_borrow_mut()
-            .map_err(|_| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "attempted to read archive concurrently",
-                )
-            })
-            .and_then(|mut rd| rd.read(buf))
+impl ReadProgressTracking for NoopReadProgressTracking {
+    fn new_read_progress_tracker(
+        &self,
+        _path: &Path,
+        rd: Box<dyn Read>,
+        _file_len: u64,
+    ) -> SnapshotResult<Box<dyn Read>> {
+        Ok(rd)
     }
 }

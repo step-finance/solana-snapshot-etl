@@ -1,15 +1,19 @@
-use crate::{
-    deserialize_from, parse_append_vec_name, AccountsDbFields, AppendVec, AppendVecIterator,
-    DeserializableVersionedBank, Result, SerializableAccountStorageEntry, SnapshotError,
-    SnapshotExtractor,
+use {
+    crate::{
+        deserialize_from, parse_append_vec_name, AccountsDbFields, AppendVec, AppendVecIterator,
+        DeserializableVersionedBank, SerializableAccountStorageEntry, SnapshotError,
+        SnapshotExtractor, SnapshotResult,
+    },
+    log::info,
+    std::{
+        fs::File,
+        io::{BufReader, Read},
+        path::{Component, Path},
+        pin::Pin,
+        time::Instant,
+    },
+    tar::{Archive, Entries, Entry},
 };
-use log::info;
-use std::fs::File;
-use std::io::{BufReader, Read};
-use std::path::{Component, Path};
-use std::pin::Pin;
-use std::time::Instant;
-use tar::{Archive, Entries, Entry};
 
 /// Extracts account data from a .tar.zst stream.
 pub struct ArchiveSnapshotExtractor<Source>
@@ -34,7 +38,7 @@ impl<Source> ArchiveSnapshotExtractor<Source>
 where
     Source: Read + Unpin + 'static,
 {
-    pub fn from_reader(source: Source) -> Result<Self> {
+    pub fn from_reader(source: Source) -> SnapshotResult<Self> {
         let tar_stream = zstd::stream::read::Decoder::new(source)?;
         let mut archive = Box::pin(Archive::new(tar_stream));
 
@@ -88,7 +92,7 @@ where
         })
     }
 
-    fn unboxed_iter(&mut self) -> impl Iterator<Item = Result<AppendVec>> + '_ {
+    fn unboxed_iter(&mut self) -> impl Iterator<Item = SnapshotResult<AppendVec>> + '_ {
         self.entries
             .take()
             .into_iter()
@@ -112,7 +116,7 @@ where
         entry: &mut Entry<'static, zstd::Decoder<'static, BufReader<Source>>>,
         slot: u64,
         id: u64,
-    ) -> Result<AppendVec> {
+    ) -> SnapshotResult<AppendVec> {
         let known_vecs = self
             .accounts_db_fields
             .0
@@ -168,7 +172,7 @@ where
 }
 
 impl ArchiveSnapshotExtractor<File> {
-    pub fn open(path: &Path) -> Result<Self> {
+    pub fn open(path: &Path) -> SnapshotResult<Self> {
         Self::from_reader(File::open(path)?)
     }
 }

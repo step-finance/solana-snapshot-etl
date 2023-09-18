@@ -1,16 +1,20 @@
-use crate::{
-    deserialize_from, parse_append_vec_name, AccountsDbFields, AppendVec, AppendVecIterator,
-    DeserializableVersionedBank, ReadProgressTracking, Result, SerializableAccountStorageEntry,
-    SnapshotError, SnapshotExtractor, SNAPSHOTS_DIR,
+use {
+    crate::{
+        deserialize_from, parse_append_vec_name, AccountsDbFields, AppendVec, AppendVecIterator,
+        DeserializableVersionedBank, ReadProgressTracking, SerializableAccountStorageEntry,
+        SnapshotError, SnapshotExtractor, SnapshotResult, SNAPSHOTS_DIR,
+    },
+    itertools::Itertools,
+    log::info,
+    solana_runtime::snapshot_utils::SNAPSHOT_STATUS_CACHE_FILENAME,
+    std::{
+        fs::OpenOptions,
+        io::BufReader,
+        path::{Path, PathBuf},
+        str::FromStr,
+        time::Instant,
+    },
 };
-use itertools::Itertools;
-use log::info;
-use solana_runtime::snapshot_utils::SNAPSHOT_STATUS_CACHE_FILENAME;
-use std::fs::OpenOptions;
-use std::io::BufReader;
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-use std::time::Instant;
 
 /// Extracts account data from snapshots that were unarchived to a file system.
 pub struct UnpackedSnapshotExtractor {
@@ -25,7 +29,10 @@ impl SnapshotExtractor for UnpackedSnapshotExtractor {
 }
 
 impl UnpackedSnapshotExtractor {
-    pub fn open(path: &Path, progress_tracking: Box<dyn ReadProgressTracking>) -> Result<Self> {
+    pub fn open(
+        path: &Path,
+        progress_tracking: Box<dyn ReadProgressTracking>,
+    ) -> SnapshotResult<Self> {
         let snapshots_dir = path.join(SNAPSHOTS_DIR);
         let status_cache = snapshots_dir.join(SNAPSHOT_STATUS_CACHE_FILENAME);
         if !status_cache.is_file() {
@@ -48,7 +55,7 @@ impl UnpackedSnapshotExtractor {
             &snapshot_file_path,
             Box::new(snapshot_file),
             snapshot_file_len,
-        );
+        )?;
         let mut snapshot_file = BufReader::new(snapshot_file);
 
         let pre_unpack = Instant::now();
@@ -76,13 +83,13 @@ impl UnpackedSnapshotExtractor {
         })
     }
 
-    pub fn unboxed_iter(&self) -> impl Iterator<Item = Result<AppendVec>> + '_ {
+    pub fn unboxed_iter(&self) -> impl Iterator<Item = SnapshotResult<AppendVec>> + '_ {
         std::iter::once(self.iter_streams())
             .flatten_ok()
             .flatten_ok()
     }
 
-    fn iter_streams(&self) -> Result<impl Iterator<Item = Result<AppendVec>> + '_> {
+    fn iter_streams(&self) -> SnapshotResult<impl Iterator<Item = SnapshotResult<AppendVec>> + '_> {
         let accounts_dir = self.root.join("accounts");
         Ok(accounts_dir
             .read_dir()?
@@ -96,7 +103,7 @@ impl UnpackedSnapshotExtractor {
             }))
     }
 
-    fn open_append_vec(&self, slot: u64, id: u64, path: &Path) -> Result<AppendVec> {
+    fn open_append_vec(&self, slot: u64, id: u64, path: &Path) -> SnapshotResult<AppendVec> {
         let known_vecs = self
             .accounts_db_fields
             .0

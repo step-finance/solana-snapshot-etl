@@ -18,12 +18,15 @@
 use {
     log::*,
     memmap2::{Mmap, MmapMut},
-    serde::{Deserialize, Serialize},
+    solana_runtime::{
+        account_storage::meta::{AccountMeta, StoredMeta},
+        accounts_file::ALIGN_BOUNDARY_OFFSET,
+        append_vec::MAXIMUM_APPEND_VEC_FILE_SIZE,
+        u64_align,
+    },
     solana_sdk::{
-        account::{Account, AccountSharedData, ReadableAccount},
-        clock::Epoch,
+        account::{Account, AccountSharedData},
         hash::Hash,
-        pubkey::Pubkey,
     },
     std::{
         convert::TryFrom,
@@ -33,65 +36,6 @@ use {
         path::Path,
     },
 };
-
-// Data placement should be aligned at the next boundary. Without alignment accessing the memory may
-// crash on some architectures.
-pub const ALIGN_BOUNDARY_OFFSET: usize = mem::size_of::<u64>();
-macro_rules! u64_align {
-    ($addr: expr) => {
-        ($addr + (ALIGN_BOUNDARY_OFFSET - 1)) & !(ALIGN_BOUNDARY_OFFSET - 1)
-    };
-}
-
-pub const MAXIMUM_APPEND_VEC_FILE_SIZE: u64 = 16 * 1024 * 1024 * 1024; // 16 GiB
-
-pub type StoredMetaWriteVersion = u64;
-
-/// Meta contains enough context to recover the index from storage itself
-/// This struct will be backed by mmaped and snapshotted data files.
-/// So the data layout must be stable and consistent across the entire cluster!
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct StoredMeta {
-    /// global write version
-    pub write_version: StoredMetaWriteVersion,
-    /// key for the account
-    pub pubkey: Pubkey,
-    pub data_len: u64,
-}
-
-/// This struct will be backed by mmaped and snapshotted data files.
-/// So the data layout must be stable and consistent across the entire cluster!
-#[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq)]
-pub struct AccountMeta {
-    /// lamports in the account
-    pub lamports: u64,
-    /// the program that owns this account. If executable, the program that loads this account.
-    pub owner: Pubkey,
-    /// this account's data contains a loaded program (and is now read-only)
-    pub executable: bool,
-    /// the epoch at which this account will next owe rent
-    pub rent_epoch: Epoch,
-}
-
-impl<'a, T: ReadableAccount> From<&'a T> for AccountMeta {
-    fn from(account: &'a T) -> Self {
-        Self {
-            lamports: account.lamports(),
-            owner: *account.owner(),
-            executable: account.executable(),
-            rent_epoch: account.rent_epoch(),
-        }
-    }
-}
-
-impl<'a, T: ReadableAccount> From<Option<&'a T>> for AccountMeta {
-    fn from(account: Option<&'a T>) -> Self {
-        match account {
-            Some(account) => AccountMeta::from(account),
-            None => AccountMeta::default(),
-        }
-    }
-}
 
 /// References to account data stored elsewhere. Getting an `Account` requires cloning
 /// (see `StoredAccountMeta::clone_account()`).
