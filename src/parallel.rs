@@ -1,13 +1,14 @@
 use {
     crate::{AppendVec, AppendVecIterator},
-    crossbeam::sync::WaitGroup,
+    tokio::task::JoinSet,
 };
 
+#[async_trait::async_trait]
 pub trait AppendVecConsumer {
-    fn on_append_vec(&mut self, append_vec: AppendVec) -> anyhow::Result<()>;
+    async fn on_append_vec(&mut self, append_vec: AppendVec) -> anyhow::Result<()>;
 }
 
-pub fn par_iter_append_vecs<F, A>(
+pub async fn par_iter_append_vecs<F, A>(
     iterator: AppendVecIterator<'_>,
     create_consumer: F,
     num_threads: usize,
@@ -16,27 +17,22 @@ where
     F: Fn() -> A,
     A: AppendVecConsumer + Send + 'static,
 {
-    let (tx, rx) = crossbeam::channel::bounded::<AppendVec>(num_threads * 2);
-    let wg = WaitGroup::new();
+    let mut tasks = JoinSet::new();
+    for append_vec in iterator {
+        let mut consumer = if tasks.len() >= num_threads {
+            tasks.join_next().await.expect("checked")??
+        } else {
+            create_consumer()
+        };
 
-    for _ in 0..num_threads {
-        let mut consumer = create_consumer();
-        let rx = rx.clone();
-        let wg = wg.clone();
-        std::thread::spawn(move || {
-            while let Ok(item) = rx.recv() {
-                consumer.on_append_vec(item).expect("insert failed")
-            }
-            drop(wg);
+        tasks.spawn(async move {
+            consumer.on_append_vec(append_vec?).await?;
+            Ok::<_, anyhow::Error>(consumer)
         });
     }
-
-    for append_vec in iterator {
-        tx.send(append_vec?).expect("failed to send AppendVec");
+    while let Some(result) = tasks.join_next().await {
+        result??;
     }
-
-    drop(tx);
-    wg.wait();
 
     Ok(())
 }

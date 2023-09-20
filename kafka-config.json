@@ -1,0 +1,21 @@
+{
+    "filter": {
+        "accounts": {
+            "client": {
+                "account": [
+                    "9P1sq9jKxAX6bS3GwXpeFTFfzxqCeVK7gs1NUNdopeJg",
+                    "Ckj55vddpMy8cFVpRzsBwQz831H1zi4LVp7JAszpKpiH",
+                    "8HJ9CPHcUdwZ4JRwFjfUBVuMAycXpNT1DdK7JBSdXHzE"
+                ],
+                "owner": [],
+                "filters": []
+            }
+        },
+        "accounts_data_slice": []
+    },
+    "kafka": {
+        "bootstrap.servers": "localhost:29092"
+    },
+    "kafka_topic": "etl",
+    "kafka_queue_size": 10000
+}

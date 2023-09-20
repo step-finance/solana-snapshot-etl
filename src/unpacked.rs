@@ -119,6 +119,7 @@ impl UnpackedSnapshotExtractor {
         Ok(AppendVec::new_from_file(
             path,
             known_vec.accounts_current_len,
+            slot,
         )?)
     }
 }

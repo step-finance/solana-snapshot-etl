@@ -23,7 +23,7 @@ Despite archives being readily available, the ecosystem was missing an easy-to-u
 ## Building
 
 ```shell
-cargo install --git https://github.com/terorie/solana-snapshot-etl --features=standalone --bins
+cargo install --git https://github.com/rpcpool/solana-snapshot-etl --bins
 ```
 
 ## Usage
@@ -34,8 +34,20 @@ and load them into one of the supported storage backends.
 The basic command-line usage is as follows:
 
 ```
-USAGE:
-    solana-snapshot-etl [OPTIONS] <LOAD_FLAGS> <SOURCE>
+$ solana-snapshot-etl --help
+Efficiently unpack Solana snapshots
+
+Usage: solana-snapshot-etl --source <SOURCE> <COMMAND>
+
+Commands:
+  noop   Load accounts and do nothing
+  kafka  Filter accounts with gRPC plugin filter and send them to Kafka
+  help   Print this message or the help of the given subcommand(s)
+
+Options:
+      --source <SOURCE>  Snapshot source (unpacked snapshot, archive file, or HTTP link)
+  -h, --help             Print help
+  -V, --version          Print version
 ```
 
 ### Sources
@@ -43,7 +55,7 @@ USAGE:
 Extract from a local snapshot file:
 
 ```shell
-solana-snapshot-etl /path/to/snapshot-*.tar.zst ...
+solana-snapshot-etl --source /path/to/snapshot-*.tar.zst noop
 ```
 
 Extract from an unpacked snapshot:
@@ -52,59 +64,26 @@ Extract from an unpacked snapshot:
 # Example unarchive command
 tar -I zstd -xvf snapshot-*.tar.zst ./unpacked_snapshot/
 
-solana-snapshot-etl ./unpacked_snapshot/
+solana-snapshot-etl --source ./unpacked_snapshot/ noop
 ```
 
 Stream snapshot from HTTP source or S3 bucket:
 
 ```shell
-solana-snapshot-etl 'https://my-solana-node.bdnodes.net/snapshot.tar.zst?auth=xxx' ...
+solana-snapshot-etl 'https://my-solana-node.bdnodes.net/snapshot.tar.zst?auth=xxx' noop
 ```
 
 ### Targets
 
-#### SQLite3 (recommended)
+#### noop
 
-The fastest way to access snapshot data is the SQLite3 load mechanism.
+Do nothing, only load snapshot, parse accounts.
 
-The resulting SQLite database file can be loaded using any SQLite client library.
-
-```shell
-solana-snapshot-etl snapshot-139240745-*.tar.zst --sqlite-out snapshot.db
-```
-
-The resulting SQLite database contains the following tables.
-
-- `account`
-- `token_account` (SPL Token Program)
-- `token_mint` (SPL Token Program)
-- `token_multisig` (SPL Token Program)
-- `token_metadata` (MPL Metadata Program)
-
-#### CSV
-
-Coming soon!
-
-#### Geyser plugin
-
-Much like `solana-validator`, this tool can write account updates to Geyser plugins.
+#### kafka
 
 ```shell
-solana-snapshot-etl snapshot-139240745-*.tar.zst --geyser plugin-config.json
+solana-snapshot-etl --source /path/to/snapshot-*.tar.zst kafka --config kafka-config.json
 ```
 
-For more info, consult Solana's docs: https://docs.solana.com/developing/plugins/geyser-plugins
-
-#### Dump programs
-
-The `--programs-out` flag exports all Solana programs (in ELF format).
-
-```shell
-solana-snapshot-etl snapshot-139240745-*.tar.zst --programs-out programs.tar
-```
-
-or to extract in place
-
-```shell
-solana-snapshot-etl snapshot-139240745-*.tar.zst --programs-out - | tar -xv
-```
+Load snapshot, parse account, filter with [Solana Geyser gRPC Plugin](https://github.com/rpcpool/yellowstone-grpc)
+filter and send filtered accounts to Kafka.

@@ -1,4 +1,5 @@
 use {
+    crate::kafka::KafkaConsumer,
     clap::{Parser, Subcommand},
     indicatif::{ProgressBar, ProgressBarIter, ProgressDrawTarget, ProgressStyle},
     log::info,
@@ -20,6 +21,8 @@ use {
     },
 };
 
+mod kafka;
+
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
 struct Args {
@@ -33,10 +36,18 @@ struct Args {
 
 #[derive(Debug, Subcommand)]
 enum Action {
+    /// Load accounts and do nothing
     Noop,
+    /// Filter accounts with gRPC plugin filter and send them to Kafka
+    Kafka {
+        /// gRPC filter and Kafka config
+        #[clap(long)]
+        config: String,
+    },
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
     );
@@ -44,25 +55,25 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let mut loader = SupportedLoader::new(&args.source, Box::new(LoadProgressTracking {}))?;
+    let bar = Arc::new(create_accounts_progress_bar()?);
     match args.action {
         Action::Noop => {
-            let bar = Arc::new(ProgressBar::with_draw_target(None, ProgressDrawTarget::stderr()).with_style(
-                ProgressStyle::with_template(
-                    "{prefix:>10.bold.dim} {spinner:.green} rate={per_sec} total={human_pos} {elapsed_precise:.cyan}",
-                )?,
-            ));
-            bar.set_prefix("accounts");
             par_iter_append_vecs(
                 loader.iter(),
                 || NoopConsumer {
                     bar: Arc::clone(&bar),
                 },
                 num_cpus::get(),
-            )?;
-            bar.finish();
-            info!("Done!");
+            )
+            .await?;
+        }
+        Action::Kafka { config } => {
+            let consumer = KafkaConsumer::new(config, Arc::clone(&bar)).await?;
+            par_iter_append_vecs(loader.iter(), || consumer.clone(), num_cpus::get()).await?;
         }
     }
+    bar.finish();
+    info!("Done!");
 
     Ok(())
 }
@@ -166,12 +177,20 @@ impl SnapshotExtractor for SupportedLoader {
     }
 }
 
+fn create_accounts_progress_bar() -> anyhow::Result<ProgressBar> {
+    let tmpl = ProgressStyle::with_template("{prefix:>10.bold.dim} {spinner:.green} rate={per_sec} processed={human_pos} {elapsed_precise:.cyan}")?;
+    let bar = ProgressBar::with_draw_target(None, ProgressDrawTarget::stderr()).with_style(tmpl);
+    bar.set_prefix("accounts");
+    Ok(bar)
+}
+
 struct NoopConsumer {
     bar: Arc<ProgressBar>,
 }
 
+#[async_trait::async_trait]
 impl AppendVecConsumer for NoopConsumer {
-    fn on_append_vec(&mut self, append_vec: AppendVec) -> anyhow::Result<()> {
+    async fn on_append_vec(&mut self, append_vec: AppendVec) -> anyhow::Result<()> {
         let count = append_vec_iter(Rc::new(append_vec)).count();
         self.bar.inc(count as u64);
         Ok(())

@@ -76,6 +76,8 @@ pub struct AppendVec {
 
     /// The number of bytes available for storing items.
     file_size: u64,
+
+    slot: u64,
 }
 
 impl AppendVec {
@@ -120,7 +122,11 @@ impl AppendVec {
         self.file_size
     }
 
-    pub fn new_from_file<P: AsRef<Path>>(path: P, current_len: usize) -> io::Result<Self> {
+    pub fn new_from_file<P: AsRef<Path>>(
+        path: P,
+        current_len: usize,
+        slot: u64,
+    ) -> io::Result<Self> {
         let data = OpenOptions::new()
             .read(true)
             .write(false)
@@ -143,18 +149,24 @@ impl AppendVec {
             map,
             current_len,
             file_size,
+            slot,
         };
 
         Ok(new)
     }
 
-    pub fn new_from_reader<R: Read>(reader: &mut R, current_len: usize) -> io::Result<Self> {
+    pub fn new_from_reader<R: Read>(
+        reader: &mut R,
+        current_len: usize,
+        slot: u64,
+    ) -> io::Result<Self> {
         let mut map = MmapMut::map_anon(current_len)?;
         io::copy(&mut reader.take(current_len as u64), &mut map.as_mut())?;
         Ok(AppendVec {
             map: map.make_read_only()?,
             current_len,
             file_size: current_len as u64,
+            slot,
         })
     }
 
@@ -209,5 +221,9 @@ impl AppendVec {
             },
             next,
         ))
+    }
+
+    pub fn slot(&self) -> u64 {
+        self.slot
     }
 }
