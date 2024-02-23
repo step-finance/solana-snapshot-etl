@@ -106,19 +106,19 @@ impl AppendVec {
     }
 
     /// how many more bytes can be stored in this append vec
-    pub fn remaining_bytes(&self) -> u64 {
+    pub const fn remaining_bytes(&self) -> u64 {
         (self.capacity()).saturating_sub(self.len() as u64)
     }
 
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.current_len
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    pub fn capacity(&self) -> u64 {
+    pub const fn capacity(&self) -> u64 {
         self.file_size
     }
 
@@ -223,7 +223,7 @@ impl AppendVec {
         ))
     }
 
-    pub fn slot(&self) -> u64 {
+    pub const fn slot(&self) -> u64 {
         self.slot
     }
 }
