@@ -9,7 +9,7 @@ use {
     serde::Deserialize,
     sha2::{Digest, Sha256},
     solana_snapshot_etl::{append_vec::AppendVec, append_vec_iter, parallel::AppendVecConsumer},
-    std::{collections::HashMap, path::Path, rc::Rc, sync::Arc},
+    std::{collections::HashMap, path::Path, sync::Arc},
     tokio::{fs, sync::Semaphore},
     yellowstone_grpc_geyser::{
         config::ConfigGrpcFilters,
@@ -81,7 +81,7 @@ impl AppendVecConsumer for KafkaConsumer {
 
         let mut count = 0;
         let mut handlers = vec![];
-        for account in append_vec_iter(Rc::new(append_vec)) {
+        for account in append_vec_iter(&append_vec) {
             if let Some(account) = account.access() {
                 let message = Message::Account(MessageAccount {
                     account: MessageAccountInfo {

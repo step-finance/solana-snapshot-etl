@@ -6,7 +6,7 @@ use {
             SerializableAccountStorageEntry,
         },
     },
-    std::{ffi::OsStr, io::Read, path::Path, rc::Rc, str::FromStr},
+    std::{ffi::OsStr, io::Read, path::Path, str::FromStr},
     thiserror::Error,
 };
 
@@ -53,7 +53,7 @@ fn parse_append_vec_name(name: &OsStr) -> Option<(u64, u64)> {
     }
 }
 
-pub fn append_vec_iter(append_vec: Rc<AppendVec>) -> impl Iterator<Item = StoredAccountMetaHandle> {
+pub fn append_vec_iter(append_vec: &AppendVec) -> impl Iterator<Item = StoredAccountMetaHandle> {
     let mut offsets = Vec::<usize>::new();
     let mut offset = 0usize;
     loop {
@@ -65,19 +65,18 @@ pub fn append_vec_iter(append_vec: Rc<AppendVec>) -> impl Iterator<Item = Stored
             }
         }
     }
-    let append_vec = Rc::clone(&append_vec);
     offsets
         .into_iter()
-        .map(move |offset| StoredAccountMetaHandle::new(Rc::clone(&append_vec), offset))
+        .map(move |offset| StoredAccountMetaHandle::new(append_vec, offset))
 }
 
-pub struct StoredAccountMetaHandle {
-    append_vec: Rc<AppendVec>,
+pub struct StoredAccountMetaHandle<'a> {
+    append_vec: &'a AppendVec,
     offset: usize,
 }
 
-impl StoredAccountMetaHandle {
-    pub fn new(append_vec: Rc<AppendVec>, offset: usize) -> StoredAccountMetaHandle {
+impl<'a> StoredAccountMetaHandle<'a> {
+    pub const fn new(append_vec: &'a AppendVec, offset: usize) -> StoredAccountMetaHandle {
         Self { append_vec, offset }
     }
 

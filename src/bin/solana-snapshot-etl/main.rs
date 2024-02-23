@@ -16,7 +16,6 @@ use {
         fs::File,
         io::{IoSliceMut, Read},
         path::Path,
-        rc::Rc,
         sync::Arc,
     },
 };
@@ -197,7 +196,7 @@ struct NoopConsumer {
 #[async_trait::async_trait]
 impl AppendVecConsumer for NoopConsumer {
     async fn on_append_vec(&mut self, append_vec: AppendVec) -> anyhow::Result<()> {
-        let count = append_vec_iter(Rc::new(append_vec)).count();
+        let count = append_vec_iter(&append_vec).count();
         self.bar.inc(count as u64);
         Ok(())
     }
