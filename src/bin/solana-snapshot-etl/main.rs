@@ -30,6 +30,11 @@ struct Args {
     #[clap(long)]
     source: String,
 
+    /// Number of threads used to process snapshot,
+    /// by default number of CPUs would be used.
+    #[clap(long)]
+    num_threads: Option<usize>,
+
     #[command(subcommand)]
     action: Action,
 }
@@ -53,6 +58,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let args = Args::parse();
+    let num_threads = args.num_threads.unwrap_or_else(num_cpus::get);
 
     let mut loader = SupportedLoader::new(&args.source, Box::new(LoadProgressTracking {}))?;
     let bar = Arc::new(create_accounts_progress_bar()?);
@@ -63,13 +69,13 @@ async fn main() -> anyhow::Result<()> {
                 || NoopConsumer {
                     bar: Arc::clone(&bar),
                 },
-                num_cpus::get(),
+                num_threads,
             )
             .await?;
         }
         Action::Kafka { config } => {
             let consumer = KafkaConsumer::new(config, Arc::clone(&bar)).await?;
-            par_iter_append_vecs(loader.iter(), || consumer.clone(), num_cpus::get()).await?;
+            par_iter_append_vecs(loader.iter(), || consumer.clone(), num_threads).await?;
         }
     }
     bar.finish();
