@@ -54,20 +54,16 @@ fn parse_append_vec_name(name: &OsStr) -> Option<(u64, u64)> {
 }
 
 pub fn append_vec_iter(append_vec: &AppendVec) -> impl Iterator<Item = StoredAccountMetaHandle> {
-    let mut offsets = Vec::<usize>::new();
     let mut offset = 0usize;
-    loop {
-        match append_vec.get_account(offset) {
-            None => break,
-            Some((_, next_offset)) => {
-                offsets.push(offset);
-                offset = next_offset;
-            }
-        }
-    }
-    offsets
-        .into_iter()
-        .map(move |offset| StoredAccountMetaHandle::new(append_vec, offset))
+    std::iter::repeat_with(move || {
+        append_vec.get_account(offset).map(|(_, next_offset)| {
+            let account = StoredAccountMetaHandle::new(append_vec, offset);
+            offset = next_offset;
+            account
+        })
+    })
+    .take_while(|account| account.is_some())
+    .filter_map(|account| account)
 }
 
 pub struct StoredAccountMetaHandle<'a> {
