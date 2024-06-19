@@ -1,5 +1,4 @@
 use {
-    crate::kafka::KafkaConsumer,
     clap::{Parser, Subcommand},
     indicatif::{ProgressBar, ProgressBarIter, ProgressDrawTarget, ProgressStyle},
     log::info,
@@ -19,8 +18,6 @@ use {
         sync::Arc,
     },
 };
-
-mod kafka;
 
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
@@ -42,12 +39,6 @@ struct Args {
 enum Action {
     /// Load accounts and do nothing
     Noop,
-    /// Filter accounts with gRPC plugin filter and send them to Kafka
-    Kafka {
-        /// gRPC filter and Kafka config
-        #[clap(long)]
-        config: String,
-    },
 }
 
 #[tokio::main]
@@ -71,10 +62,6 @@ async fn main() -> anyhow::Result<()> {
                 num_threads,
             )
             .await?;
-        }
-        Action::Kafka { config } => {
-            let consumer = KafkaConsumer::new(config, Arc::clone(&bar)).await?;
-            par_iter_append_vecs(loader.iter(), || consumer.clone(), num_threads).await?;
         }
     }
     bar.finish();
