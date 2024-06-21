@@ -18,7 +18,7 @@
 use {
     log::*,
     memmap2::{Mmap, MmapMut},
-    solana_runtime::{
+    solana_accounts_db::{
         account_storage::meta::{AccountMeta, StoredMeta},
         accounts_file::ALIGN_BOUNDARY_OFFSET,
         append_vec::MAXIMUM_APPEND_VEC_FILE_SIZE,
