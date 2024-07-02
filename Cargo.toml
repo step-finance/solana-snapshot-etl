@@ -1,6 +1,6 @@
 [package]
 name = "solana-snapshot-etl"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 license = "Apache-2.0"
 documentation = "https://docs.rs/solana-snapshot-etl"
@@ -27,10 +27,10 @@ reqwest = { version = "0.11.11", features = ["blocking"] }
 serde = { version = "1.0.139", features = ["derive"] }
 serde_json = "1.0.107"
 sha2 = "0.10.7"
-solana-frozen-abi-macro = "=1.17.16"
-solana-accounts-db = "=1.17.16"
-solana-runtime = "=1.17.16"
-solana-sdk = "=1.17.16"
+solana-frozen-abi-macro = "=1.18.15"
+solana-accounts-db = "=1.18.15"
+solana-runtime = "=1.18.15"
+solana-sdk = "=1.18.15"
 tar = "0.4.38"
 thiserror = "1.0.31"
 tokio = { version = "1.32.0", features = ["rt-multi-thread", "macros"]}
