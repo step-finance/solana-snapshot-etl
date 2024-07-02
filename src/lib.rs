@@ -40,6 +40,7 @@ pub type AppendVecIterator<'a> = Box<dyn Iterator<Item = SnapshotResult<AppendVe
 
 pub trait SnapshotExtractor: Sized {
     fn iter(&mut self) -> AppendVecIterator<'_>;
+    fn slot(&self) -> u64;
 }
 
 fn parse_append_vec_name(name: &OsStr) -> Option<(u64, u64)> {

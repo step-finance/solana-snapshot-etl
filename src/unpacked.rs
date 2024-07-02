@@ -20,11 +20,15 @@ use {
 pub struct UnpackedSnapshotExtractor {
     root: PathBuf,
     accounts_db_fields: AccountsDbFields<SerializableAccountStorageEntry>,
+    slot: u64,
 }
 
 impl SnapshotExtractor for UnpackedSnapshotExtractor {
     fn iter(&mut self) -> AppendVecIterator<'_> {
         Box::new(self.unboxed_iter())
+    }
+    fn slot(&self) -> u64 {
+        self.slot
     }
 }
 
@@ -60,6 +64,7 @@ impl UnpackedSnapshotExtractor {
 
         let pre_unpack = Instant::now();
         let versioned_bank: DeserializableVersionedBank = deserialize_from(&mut snapshot_file)?;
+        let slot = versioned_bank.slot;
         drop(versioned_bank);
         let versioned_bank_post_time = Instant::now();
 
@@ -80,6 +85,7 @@ impl UnpackedSnapshotExtractor {
         Ok(UnpackedSnapshotExtractor {
             root: path.to_path_buf(),
             accounts_db_fields,
+            slot,
         })
     }
 

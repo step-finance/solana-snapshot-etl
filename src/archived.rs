@@ -23,6 +23,7 @@ where
     accounts_db_fields: AccountsDbFields<SerializableAccountStorageEntry>,
     _archive: Pin<Box<Archive<zstd::Decoder<'static, BufReader<Source>>>>>,
     entries: Option<Entries<'static, zstd::Decoder<'static, BufReader<Source>>>>,
+    slot: u64,
 }
 
 impl<Source> SnapshotExtractor for ArchiveSnapshotExtractor<Source>
@@ -31,6 +32,9 @@ where
 {
     fn iter(&mut self) -> AppendVecIterator<'_> {
         Box::new(self.unboxed_iter())
+    }
+    fn slot(&self) -> u64 {
+        self.slot
     }
 }
 
@@ -68,6 +72,7 @@ where
 
         let pre_unpack = Instant::now();
         let versioned_bank: DeserializableVersionedBank = deserialize_from(&mut snapshot_file)?;
+        let slot = versioned_bank.slot;
         drop(versioned_bank);
         let versioned_bank_post_time = Instant::now();
 
@@ -89,6 +94,7 @@ where
             _archive: archive,
             accounts_db_fields,
             entries: Some(entries),
+            slot,
         })
     }
 
