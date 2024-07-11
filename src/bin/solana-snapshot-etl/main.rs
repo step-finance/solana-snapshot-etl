@@ -167,6 +167,14 @@ impl SnapshotExtractor for SupportedLoader {
             SupportedLoader::ArchiveDownload(loader) => Box::new(loader.iter()),
         }
     }
+    
+    fn slot(&self) -> u64 {
+        match self {
+            SupportedLoader::Unpacked(loader) => loader.slot(),
+            SupportedLoader::ArchiveFile(loader) => loader.slot(),
+            SupportedLoader::ArchiveDownload(loader) => loader.slot(),
+        }
+    }
 }
 
 fn create_accounts_progress_bar() -> anyhow::Result<ProgressBar> {
