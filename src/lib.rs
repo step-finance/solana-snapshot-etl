@@ -64,7 +64,7 @@ pub fn append_vec_iter(append_vec: &AppendVec) -> impl Iterator<Item = StoredAcc
         })
     })
     .take_while(|account| account.is_some())
-    .filter_map(|account| account)
+    .flatten()
 }
 
 pub struct StoredAccountMetaHandle<'a> {
@@ -73,7 +73,7 @@ pub struct StoredAccountMetaHandle<'a> {
 }
 
 impl<'a> StoredAccountMetaHandle<'a> {
-    pub const fn new(append_vec: &'a AppendVec, offset: usize) -> StoredAccountMetaHandle {
+    pub const fn new(append_vec: &'a AppendVec, offset: usize) -> StoredAccountMetaHandle<'a> {
         Self { append_vec, offset }
     }
 
@@ -90,7 +90,7 @@ pub trait ReadProgressTracking {
         file_len: u64,
     ) -> SnapshotResult<Box<dyn Read>>;
 }
-
+#[allow(dead_code)]
 struct NoopReadProgressTracking {}
 
 impl ReadProgressTracking for NoopReadProgressTracking {
