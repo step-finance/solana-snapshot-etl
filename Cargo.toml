@@ -28,13 +28,18 @@ serde = { version = "1.0.139", features = ["derive"] }
 serde_json = "1.0.107"
 sha2 = "0.10.7"
 solana-frozen-abi-macro = "=2.2.1"
-solana-accounts-db = "=2.2.2"
-solana-runtime = "=2.2.2"
-solana-sdk = "=2.2.1"
+solana-accounts-db = "=2.2.14"
+solana-runtime = "=2.2.14"
+solana-sdk = "=2.2.2"
 tar = "0.4.38"
 thiserror = "1.0.57"
 tokio = { version = "1.32.0", features = ["rt-multi-thread", "macros"] }
 zstd = "0.11.2"
+
+
+[patch.crates-io]
+solana-runtime = { git = 'https://github.com/step-finance/agave', rev = "253f10304b457c38f6eb3d993803af3423a05f2c" }
+solana-accounts-db = { git = 'https://github.com/step-finance/agave', rev = "253f10304b457c38f6eb3d993803af3423a05f2c" }
 
 [lints.clippy]
 clone_on_ref_ptr = "deny"
